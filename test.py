@@ -22,63 +22,56 @@ state2 = "false"
 
 def connect_mqtt() -> mqtt_client:
 
-    client = mqtt_client.Client(client_id)
-    client.connect(broker, port)
+    client = mqtt_client.Client()  #ko co id
     client.username_pw_set(ACCESS_TOKEN)
     client.connect(broker,port,keepalive=60)
     return client
 
-def convert():
-    payload="{"
-    payload+="\"1\":"
-    payload+=state1
-    payload+="," 
-    payload+="\"2\":"
-    payload+=state2
-    payload+="}"
-    print(payload)
+def init_responce() :
+    payload = "{}"
+    return payload
+
+def add_json(key , value, responce: str):
+    json_responce = json.loads(responce)
+    json_responce[key] = value
+    return json.dumps(json_responce)
 
 
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
-        print("HJAHAHAHAHAH")
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        print(msg.payload.decode())
-        y = json.loads(msg.payload.decode())
+        y = json.loads(msg.payload.decode())                        #convert sang json
+        z = json.dumps(y)                                           #convert to string
+        repsonTopic = str(msg.topic)
+        responce =  repsonTopic.replace("request", "response")
 
-        if y["params"]["pin"] == True :
-            state = str(y["params"]["enabled"])
-            payload="{"
-            payload+="\"1\":"
-            payload+=state
-            payload+="}"
+        if z.count('pin') != 0 :           
+            payload = init_responce()
+            payload = add_json(y["params"]["pin"], y["params"]["enabled"], payload)
+            payload = payload.replace("\"true\"", "true")
+            payload = payload.replace("\"false\"", "false")
             print("PARSE SUCCESSFULLY..................")
             print(payload)
+            client.publish("v1/devices/me/attributes", payload)
+            client.publish(responce, payload)
+
         else :
-            state = str(y["params"]["enabled"])
-            payload="{"
-            payload+="\"2\":"
-            payload+=state
-            payload+="}"    
-            print("PARSE SUCCESSFULLY..................")
-            print(payload)
-        
+            payload = init_responce()
+            payload = add_json(1, "false", payload)
+            payload = add_json(2, "false", payload)
+            client.subscribe(topic)
+            client.publish("v1/devices/me/attributes", payload)
+            client.publish(responce, payload)
 
-        client.publish("v1/devices/me/attributes", payload)
-    
-    payload="{"
-    payload+="\"1\":"
-    payload+=state1
-    payload+="," 
-    payload+="\"2\":"
-    payload+=state2
-    payload+="}"
 
-    client.publish("v1/devices/me/attributes", payload)
-    client.subscribe(topic)
+    print("CALLBACK>>>>>>>>>>>>>>>>>>>>>>>>")
+    payload = init_responce()
+    payload = add_json(1, "true", payload)
+    payload = add_json(2, "true", payload)
     client.on_message = on_message
-
-
+    client.subscribe(topic)
+    client.publish("v1/devices/me/attributes", payload)
+    
 def run() :
     client = connect_mqtt()
     subscribe(client)
