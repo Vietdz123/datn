@@ -6,19 +6,17 @@ import os
 import json
 import time
 from datetime import datetime
-
 from threading import Thread
 import threading
 
-broker = '127.0.0.1'
-port = 1883
-topic = "v1/devices/me/rpc/request/+"
 broker="127.0.0.1"   			    #host name
 port=1883 					    #data listening port
 ACCESS_TOKEN1 ='ufgVcklJD3yoKTWSBoa9'    #Smart-lighting -VietPro
-ACCESS_TOKEN2 ='8rQoOpUxcBmUVkkZaVOb'   # viet  
+ACCESS_TOKEN2 ='8rQoOpUxcBmUVkkZaVOb'   # viet 
+ACCESS_TOKEN3= 'VPsng4Dk3KXh0NTKwhVt'  
 TELEMETRY = "v1/devices/me/telemetry"
 ATTRIBUTE = "v1/devices/me/attributes"
+topic = "v1/devices/me/rpc/request/+"
 
 def check_state(fullstring: str, substring: str) :
     if fullstring.find(substring) != -1:
@@ -31,7 +29,7 @@ def check_state(fullstring: str, substring: str) :
         return payload_telemetry    
 
 def connect_mqtt(TOKEN: str) -> mqtt_client:
-    client = mqtt_client.Client()  #ko co id
+    client = mqtt_client.Client()  
     client.username_pw_set(TOKEN)
     client.connect(broker,port,keepalive=60)
     return client
@@ -44,8 +42,8 @@ def add_json(key , value, responce: str):
     json_responce = json.loads(responce)
     json_responce[key] = value
     payload = json.dumps(json_responce)
-    payload = payload.replace("\"true\"", "true")
-    payload = payload.replace("\"false\"", "false")
+    # payload = payload.replace("\"true\"", "true")
+    # payload = payload.replace("\"false\"", "false")
     return payload
 
 def subscribe(client: mqtt_client):
@@ -71,7 +69,7 @@ def subscribe(client: mqtt_client):
             payload = add_json(1, "false", payload)
             payload = add_json(2, "false", payload)
             client.subscribe(topic)
-            client.publish(ATTRIBUTE, payload)
+            #client.publish(ATTRIBUTE, payload)
             client.publish(responce, payload)
 
     print("CALLBACK>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -86,14 +84,18 @@ def run(client: mqtt_client) :
     client.loop_forever()
 
 if __name__ == '__main__':
-    # client = connect_mqtt()
     client = connect_mqtt(ACCESS_TOKEN1)
     client1 = connect_mqtt(ACCESS_TOKEN2)
+    client2 = connect_mqtt(ACCESS_TOKEN3)
     subscribe(client)
     subscribe(client1)
+    subscribe(client2)
     t1 = threading.Thread(target=run, args=(client,))
     t2 = threading.Thread(target=run, args=(client1,))
+    t3 = threading.Thread(target=run, args=(client2,))
     t1.start()
     t2.start()
-    t1.join()
-    t2.join()
+    t3.start()
+    # t1.join()
+    # t2.join()
+    # t3.join()
